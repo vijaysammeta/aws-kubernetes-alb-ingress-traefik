@@ -1,1 +1,112 @@
 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hdfc-ingress
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/subnet-auto-discovery: kops-util
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: YOUR-ACM-CERTIFICATE-ARN
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+
+    alb.ingress.kubernetes.io/transforms.ib-service: |
+      [
+        {
+          "type": "url-rewrite",
+          "urlRewriteConfig": {
+            "rewrites": [
+              {
+                "regex": "^/ib/?(.*)$",
+                "replace": "/$1"
+              }
+            ]
+          }
+        }
+      ]
+
+    alb.ingress.kubernetes.io/transforms.mb-service: |
+      [
+        {
+          "type": "url-rewrite",
+          "urlRewriteConfig": {
+            "rewrites": [
+              {
+                "regex": "^/mb/?(.*)$",
+                "replace": "/$1"
+              }
+            ]
+          }
+        }
+      ]
+
+    alb.ingress.kubernetes.io/transforms.insurance-service: |
+      [
+        {
+          "type": "url-rewrite",
+          "urlRewriteConfig": {
+            "rewrites": [
+              {
+                "regex": "^/insurance/?(.*)$",
+                "replace": "/$1"
+              }
+            ]
+          }
+        }
+      ]
+
+    alb.ingress.kubernetes.io/transforms.loans-service: |
+      [
+        {
+          "type": "url-rewrite",
+          "urlRewriteConfig": {
+            "rewrites": [
+              {
+                "regex": "^/loans/?(.*)$",
+                "replace": "/$1"
+              }
+            ]
+          }
+        }
+      ]
+
+spec:
+  ingressClassName: alb
+  rules:
+    - host: k8s.vijaysammeta.online
+      http:
+        paths:
+          - path: /ib
+            pathType: Prefix
+            backend:
+              service:
+                name: ib-service
+                port:
+                  number: 80
+
+          - path: /mb
+            pathType: Prefix
+            backend:
+              service:
+                name: mb-service
+                port:
+                  number: 80
+
+          - path: /insurance
+            pathType: Prefix
+            backend:
+              service:
+                name: insurance-service
+                port:
+                  number: 80
+
+          - path: /loans
+            pathType: Prefix
+            backend:
+              service:
+                name: loans-service
+                port:
+                  number: 80
