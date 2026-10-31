@@ -5,6 +5,7 @@
 This project demonstrates deploying four independent web applications on an AWS Kubernetes cluster using Docker, Kubernetes, kOps, AWS Application Load Balancer (ALB) Ingress, and Traefik.
 
 Applications:
+
 - Internet Banking
 - Mobile Banking
 - Insurance
@@ -13,6 +14,7 @@ Applications:
 Each application is containerized using Docker and deployed on Kubernetes with three replicas.
 
 The project explores two approaches to application routing:
+
 1. AWS ALB Ingress Controller with path-based routing and HTTPS.
 2. Traefik Ingress Controller with path-based routing and middleware.
 
@@ -35,6 +37,7 @@ The project explores two approaches to application routing:
 
 ## Project Architecture
 
+```text
                     Users
                       |
                   Route 53
@@ -50,27 +53,27 @@ The project explores two approaches to application routing:
                       |
               Path-Based Routing
                       |
-       +--------------+--------------+-------------------+
-       |              |              |                    |
-      /ib            /mb        /insurance               /loans
-       |              |              |                     |
-  ib-service     mb-service   insurance-service          loans-service
-       |              |              |                      |
-  ib-deployment  mb-deployment insurance-deployment       loans-deployment
+       +--------------+--------------+------------------+
+       |              |              |                  |
+      /ib            /mb        /insurance           /loans
+       |              |              |                  |
+  ib-service     mb-service   insurance-service     loans-service
+       |              |              |                   |             
+  ib-deployment  mb-deployment insurance-deployment   loans-deployment
 
-                     
-
+                      
+```
 
 *ALB Ingress and Traefik are separate routing implementations, not a single combined controller chain.*
 
 ## Application URLs
 
-| Application | Path |
-|---|---|
-| Internet Banking | `/ib` |
-| Mobile Banking | `/mb` |
-| Insurance | `/insurance` |
-| Loans | `/loans` |
+| Application      | Path         |
+| ---------------- | ------------ |
+| Internet Banking | `/ib`        |
+| Mobile Banking   | `/mb`        |
+| Insurance        | `/insurance` |
+| Loans            | `/loans`     |
 
 ALB application domain:
 
