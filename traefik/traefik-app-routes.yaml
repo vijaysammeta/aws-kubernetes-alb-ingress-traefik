@@ -1,1 +1,75 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ib-strip
+spec:
+  stripPrefix:
+    prefixes:
+      - /ib
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: mb-strip
+spec:
+  stripPrefix:
+    prefixes:
+      - /mb
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: insurance-strip
+spec:
+  stripPrefix:
+    prefixes:
+      - /insurance
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loans-strip
+spec:
+  stripPrefix:
+    prefixes:
+      - /loans
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: hdfc-app-routes
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`k8s.vijaysammeta.online`) && PathPrefix(`/ib`)
+      kind: Rule
+      middlewares:
+        - name: ib-strip
+      services:
+        - name: ib-service
+          port: 80
 
+    - match: Host(`k8s.vijaysammeta.online`) && PathPrefix(`/mb`)
+      kind: Rule
+      middlewares:
+        - name: mb-strip
+      services:
+        - name: mb-service
+          port: 80
+
+    - match: Host(`k8s.vijaysammeta.online`) && PathPrefix(`/insurance`)
+      kind: Rule
+      middlewares:
+        - name: insurance-strip
+      services:
+        - name: insurance-service
+          port: 80
+
+    - match: Host(`k8s.vijaysammeta.online`) && PathPrefix(`/loans`)
+      kind: Rule
+      middlewares:
+        - name: loans-strip
+      services:
+        - name: loans-service
+          port: 80
