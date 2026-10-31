@@ -1,0 +1,390 @@
+TRAEFIK PATH-BASED ROUTING - PRACTICAL LAB
+==========================================
+
+DOMAIN: k8s.vijaysammeta.online
+NAMESPACE: default
+APPLICATIONS: Insurance, IB, MB, Loans
+
+1. CREATE APPLICATION DEPLOYMENTS AND SERVICES
+-----------------------------------------------
+
+Create the file:
+
+vi applications.yaml
+
+Paste:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insurance-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: insurance
+  template:
+    metadata:
+      labels:
+        app: insurance
+    spec:
+      containers:
+      - name: insurance
+        image: vijaysammeta/insurance-image:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insurance-service
+spec:
+  type: ClusterIP
+  selector:
+    app: insurance
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ib-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ib
+  template:
+    metadata:
+      labels:
+        app: ib
+    spec:
+      containers:
+      - name: ib
+        image: vijaysammeta/ib-image:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ib-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ib
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mb-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mb
+  template:
+    metadata:
+      labels:
+        app: mb
+    spec:
+      containers:
+      - name: mb
+        image: vijaysammeta/mb-image:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mb-service
+spec:
+  type: ClusterIP
+  selector:
+    app: mb
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loans-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: loans
+  template:
+    metadata:
+      labels:
+        app: loans
+    spec:
+      containers:
+      - name: loans
+        image: vijaysammeta/loans-image:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loans-service
+spec:
+  type: ClusterIP
+  selector:
+    app: loans
+  ports:
+  - port: 80
+    targetPort: 80
+
+Apply the file:
+
+kubectl apply -f applications.yaml
+
+Check:
+
+kubectl get deployments
+kubectl get pods
+kubectl get services
+
+
+2. INSTALL TRAEFIK USING HELM
+-----------------------------
+
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+
+Create the file:
+
+vi traefik-values.yaml
+
+Paste:
+
+deployment:
+  replicas: 2
+
+service:
+  enabled: true
+  type: NodePort
+
+ports:
+  web:
+    nodePort: 32464
+
+api:
+  dashboard: true
+  insecure: false
+
+providers:
+  kubernetesIngress:
+    enabled: true
+  kubernetesCRD:
+    enabled: true
+
+Install Traefik:
+
+kubectl create namespace traefik
+
+helm install traefik traefik/traefik \
+  -n traefik \
+  -f traefik-values.yaml \
+  --wait --timeout 5m
+
+Check:
+
+kubectl get pods -n traefik
+kubectl get service -n traefik
+
+
+3. CREATE TRAEFIK ROUTES
+------------------------
+
+Create the file:
+
+vi traefik-app-routes.yaml
+
+Paste:
+
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: insurance-strip
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+    - /insurance
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ib-strip
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+    - /ib
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: mb-strip
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+    - /mb
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loans-strip
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+    - /loans
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: banking-apps-route
+  namespace: default
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`k8s.vijaysammeta.online`) && (Path(`/insurance`) || PathPrefix(`/insurance/`))
+    kind: Rule
+    middlewares:
+    - name: insurance-strip
+    services:
+    - name: insurance-service
+      port: 80
+  - match: Host(`k8s.vijaysammeta.online`) && (Path(`/ib`) || PathPrefix(`/ib/`))
+    kind: Rule
+    middlewares:
+    - name: ib-strip
+    services:
+    - name: ib-service
+      port: 80
+  - match: Host(`k8s.vijaysammeta.online`) && (Path(`/mb`) || PathPrefix(`/mb/`))
+    kind: Rule
+    middlewares:
+    - name: mb-strip
+    services:
+    - name: mb-service
+      port: 80
+  - match: Host(`k8s.vijaysammeta.online`) && (Path(`/loans`) || PathPrefix(`/loans/`))
+    kind: Rule
+    middlewares:
+    - name: loans-strip
+    services:
+    - name: loans-service
+      port: 80
+
+Apply:
+
+kubectl apply -f traefik-app-routes.yaml
+
+Check:
+
+kubectl get middleware
+kubectl get ingressroute
+
+
+4. GET TRAEFIK NODEPORT AND WORKER PUBLIC IP
+--------------------------------------------
+
+Check Traefik NodePort:
+
+kubectl get service traefik -n traefik
+
+The HTTP NodePort must be 32464 for the URL examples below.
+If Kubernetes assigned a different NodePort, use that port in the URLs and
+in the security-group rule.
+
+Get worker public IP addresses:
+
+kubectl get nodes -o wide
+
+Use the EC2 console to identify the public IPv4 address of a worker node.
+
+
+5. CREATE ROUTE 53 DNS RECORD
+-----------------------------
+
+Open AWS Console.
+
+Route 53 -> Hosted zones -> vijaysammeta.online -> Create record
+
+Record name: k8s
+Record type: A
+Value: <WORKER_PUBLIC_IPV4>
+TTL: 300
+Routing policy: Simple
+
+Create the record.
+
+Allow inbound TCP port 32464 in the worker node security group.
+Use an appropriate source range for your lab access.
+
+
+6. OPEN THE APPLICATIONS USING DOMAIN AND PATH
+-----------------------------------------------
+
+Open these URLs:
+
+http://k8s.vijaysammeta.online:32464/insurance
+http://k8s.vijaysammeta.online:32464/ib
+http://k8s.vijaysammeta.online:32464/mb
+http://k8s.vijaysammeta.online:32464/loans
+
+
+7. VERIFY THE ROUTING
+---------------------
+
+kubectl get pods
+kubectl get services
+kubectl get pods -n traefik
+kubectl get service traefik -n traefik
+kubectl get middleware
+kubectl get ingressroute
+
+Test from a machine that can reach the worker public IP:
+
+curl -I http://k8s.vijaysammeta.online:32464/insurance
+curl -I http://k8s.vijaysammeta.online:32464/ib
+curl -I http://k8s.vijaysammeta.online:32464/mb
+curl -I http://k8s.vijaysammeta.online:32464/loans
+
+
+EXPECTED ROUTING
+----------------
+
+k8s.vijaysammeta.online:32464/insurance  -> insurance-service
+k8s.vijaysammeta.online:32464/ib         -> ib-service
+k8s.vijaysammeta.online:32464/mb         -> mb-service
+k8s.vijaysammeta.online:32464/loans      -> loans-service
+
+
+NOTE
+----
+
+This lab uses Traefik NodePort because the AWS account used in the lab did
+not allow creating an AWS Load Balancer. Therefore the NodePort number is
+included in the browser URLs. Route 53 maps the domain to the worker public
+IP; it does not remove the NodePort from the URL.
+
+The worker must have a public IPv4 address, and its security group must
+allow the selected NodePort. If the worker public IP changes, update the
+Route 53 A record.
+
+The deployment labels and service selectors in applications.yaml must
+match. If the four applications are already deployed and their Services
+exist, do not recreate them; use the existing Services in the IngressRoute.
