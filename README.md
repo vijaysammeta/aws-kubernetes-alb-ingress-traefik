@@ -35,7 +35,6 @@ The project explores two approaches to application routing:
 
 ## Project Architecture
 
-```text
                     Users
                       |
                   Route 53
@@ -51,21 +50,16 @@ The project explores two approaches to application routing:
                       |
               Path-Based Routing
                       |
-       +--------------+--------------+
-       |              |              |
-      /ib            /mb        /insurance
-       |              |              |
-  ib-service     mb-service   insurance-service
-       |              |              |
-  ib-deployment  mb-deployment insurance-deployment
+       +--------------+--------------+-------------------+
+       |              |              |                    |
+      /ib            /mb        /insurance               /loans
+       |              |              |                     |
+  ib-service     mb-service   insurance-service          loans-service
+       |              |              |                      |
+  ib-deployment  mb-deployment insurance-deployment       loans-deployment
 
-                      |
-                    /loans
-                      |
-                loans-service
-                      |
-               loans-deployment
-```
+                     
+
 
 *ALB Ingress and Traefik are separate routing implementations, not a single combined controller chain.*
 
